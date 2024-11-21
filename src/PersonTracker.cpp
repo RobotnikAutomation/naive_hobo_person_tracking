@@ -71,9 +71,9 @@ PersonTracker::PersonTracker() : private_nh_("~") {
   wp_marker_.color.g = 0.0;
   wp_marker_.color.b = 1.0;
 
-  marker_pub_ = nh_.advertise<visualization_msgs::Marker>("clusters", 1);
+  marker_pub_ = nh_.advertise<visualization_msgs::Marker>("clusters", 10);
   goal_pub_ = nh_.advertise<visualization_msgs::Marker>("goal_wp", 1);
-  cmd_pub_ = nh_.advertise<geometry_msgs::Twist>(cmd_topic_, 1);
+  cmd_pub_ = nh_.advertise<geometry_msgs::Twist>(cmd_topic_, 10);
 
   cloud_sub_ = nh_.subscribe(lidar_topic_, 1, &PersonTracker::cloudCallback, this);
   tracking_sub_ = nh_.subscribe(tracking_topic_, 1, &PersonTracker::trackingCallback, this);
@@ -185,16 +185,20 @@ void PersonTracker::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud)
   if (!start_tracking_) {
     ROS_INFO("Found %d objects!", (int) cluster_centroids.size());
     for (int i = 0; i < cluster_centroids.size(); i++) {
+
       cp.x = cluster_centroids[i].x;
       cp.y = cluster_centroids[i].y;
       cp.z = cluster_centroids[i].z;
-      marker_.points.push_back(cp);
-      dist = euclideanDistance(cluster_centroids[i]);
-      if (dist < min_distance) {
-        object_position_ = cluster_centroids[i];
-        min_distance = dist;
+      if(!(cp.x == 0 && cp.y == 0 && cp.z == 0))
+      {
+        marker_.points.push_back(cp);
+        dist = euclideanDistance(cluster_centroids[i]);
+        if (dist < min_distance) {
+          object_position_ = cluster_centroids[i];
+          min_distance = dist;
+        }
+        ROS_INFO("Object %d found at (%lf, %lf, %lf)", i + 1, cp.x, cp.y, cp.z);
       }
-      ROS_INFO("Object %d found at (%lf, %lf, %lf)", i + 1, cp.x, cp.y, cp.z);
     }
     marker_pub_.publish(marker_);
   }
@@ -204,7 +208,7 @@ void PersonTracker::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud)
   if (start_tracking_) {
     if (!cluster_centroids.empty()) {
       auto p = getClosestPoint(object_position_, cluster_centroids);
-      if (euclideanDistance(p, object_position_) > 1.0) {
+      if (euclideanDistance(p, object_position_) > 5.0) {
         ROS_WARN("Object being tracked was lost!");
         cmd_pub_.publish(move_cmd);
         return;
@@ -215,7 +219,8 @@ void PersonTracker::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud)
       wp_marker_.pose.position.y = object_position_.y;
       wp_marker_.pose.position.z = 0.0;
       wp_marker_.header = cloud->header;
-      goal_pub_.publish(wp_marker_);
+      if(object_position_.z > 0.5)
+        goal_pub_.publish(wp_marker_);
 
       auto disp = euclideanDistance(object_position_);
       auto theta = atan2(object_position_.y, object_position_.x);
@@ -230,7 +235,7 @@ void PersonTracker::cloudCallback(const sensor_msgs::PointCloud2ConstPtr &cloud)
         angular_speed = copysign(fmax(min_angular_speed_,
                                       fmin(max_angular_speed_, abs(angular_speed))), angular_speed);
 
-        move_cmd.linear.x = linear_speed;
+        move_cmd.linear.x = -0.5*linear_speed;
         move_cmd.angular.z = angular_speed;
       }
       cmd_pub_.publish(move_cmd);

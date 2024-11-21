@@ -4,37 +4,23 @@
   <arg name="return" default="0" />
   <arg name="maxCloudSize" default="-1" />
 
-  <!-- driver -->
-  <group ns="$(arg ns)">
-    <node name="client_node"
-          pkg="quanergy_client_ros"
-          type="client_node"
-          args="--host $(arg host) --settings $(find quanergy_client_ros)/settings/client.xml --frame $(arg ns) --return $(arg return) --max-cloud $(arg maxCloudSize)"
-          required="true"
-          output="screen"/>
-  </group>
-
-    <node name="radio_controller" pkg="radio_controller" type="radio_controller_node" output="screen" args="/dev/ttyUSB1 9600">
-        <rosparam command="load" file="$(find radio_controller)/cfg/radio_controller.yaml" />
-        <param name="pub_topic" value="/cmd_vel"/>
-    </node>
 
     <node type="person_tracker" name="person_tracker" pkg="person_tracking" output="screen">
-        <param name="lidar_topic" value="/Quanergy/Scan/points"/>
+        <param name="lidar_topic" value="/cloud_all_fields_fullframe"/>
         <param name="tracking_topic" value="/start_tracking"/>
-        <param name="cmd_vel_topic" value="/cmd_vel"/>
-        <param name="keep_points_upto" value="10.0"/>
+        <param name="cmd_vel_topic" value="/robot/move/cmd_vel"/>
+        <param name="keep_points_upto" value="3.0"/>
         <param name="distance_to_maintain" value="1.0"/>
         <param name="linear_threshold" value="0.1"/>
         <param name="angular_threshold" value="0.1"/>
         <param name="time_to_x" value="1.0"/>
         <param name="time_to_angle" value="1.0"/>
-        <param name="max_linear_speed" value="1.0"/>
+        <param name="max_linear_speed" value="0.8"/>
         <param name="min_linear_speed" value="0.1"/>
-        <param name="max_angular_speed" value="1.0"/>
+        <param name="max_angular_speed" value="0.8"/>
         <param name="min_angular_speed" value="0.0"/>
         <param name="clip_cloud" value="true"/>
-        <param name="clip_angle_min" value="-1.31"/>
-        <param name="clip_angle_max" value="1.31"/>
+        <param name="clip_angle_min" value="-0.8"/>
+        <param name="clip_angle_max" value="0.8"/>
     </node>
 </launch>
